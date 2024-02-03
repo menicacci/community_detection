@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "graph.h"
+#include "list.h"
 
 // TODO: Implement a dynamic way to load a graph from a file
 // TODO: Handle memory allocation failures
@@ -7,37 +8,45 @@
 int main(int argc, char **argv)
 {
 	
+	graph *g = initiate_graph(10);
 	
-	graph *g = initiate_graph(28);
-	
-	int links[38][2] = {
-		{1, 2}, {1, 11},
-		{2, 6},
-		{3, 4}, {3, 5}, {3, 8}, {3, 9},
-		{4, 5}, {4, 8}, {4, 9},
-		{5, 8}, {5, 9},
-		{8, 9},
-		{6, 7},
-		{7, 11},
-		{10, 12}, {10, 13}, {10, 14},
-		{12, 13}, {12, 14}, {12, 15}, {12, 16},
-		{13, 15},
-		{14, 16},
-		{15, 16}, {15, 18},
-		{16, 17},
-		{17, 18},
-		{19, 20}, {19, 22}, {19, 24}, {19, 28},
-		{20, 25}, {20, 21},
-		{21, 22}, {21, 23}, 
-		{22, 24},
-		{23, 25},
+	int links[14][2] = {
+		{1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {1, 7}, {1, 8},
+		{2, 3}, {2, 4},
+		{4, 5},
+		{6, 7}, {6, 8},
+		{7, 8}, {7, 9},
 	};
 	
-	initiate_links(g, links, 38);
+	initiate_links(g, links, 14);
 	
 	int num_bc = calculate_biconnected_components(g);
 	
-	printf("Number of Biconnected Components: %d\n\n", num_bc);
 	print_graph(g);
+	
+	List **bc = (List **)malloc(sizeof(List *) * num_bc);
+	initiate_array_list(bc, num_bc);
+	
+	printf("\n\nNumber of Biconnected Components: %d\n\n", num_bc);
+	for (int i = 0; i < g->v_len; i++)
+	{
+		vertex *v = &g->vertices[i];
+		Node *n = v->bc_ids->head;
+		while (n != NULL)
+		{
+			add_tail(bc[n->item - 1], v->id);
+			n = n->next;
+		}
+	}
+	
+	for (int i = 0; i < num_bc; i++)
+	{
+		printf("List: %d\n", i + 1);
+		print_list(bc[i]);
+		free_list(bc[i]);
+	}
+	
+	
+	free(bc);
 	free_graph(g);
 }

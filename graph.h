@@ -1,3 +1,4 @@
+#include "list.h"
 
 #ifndef GRAPH_H
 #define GRAPH_H
@@ -10,8 +11,8 @@ typedef struct link_struct link;
 typedef struct graph_struct
 {
 	int v_len;
-	vertex *vertices;
 	int l_len;
+	vertex *vertices;
 	link *links;
 	int progress;
 };
@@ -24,6 +25,7 @@ typedef struct vertex_struct
 	int color;
 	int n_len;
 	link **neighbours;
+	List* bc_ids;
 };
 
 

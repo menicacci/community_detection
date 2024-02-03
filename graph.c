@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "graph.h"
+#include "list.h"
 
 
 graph *initiate_graph(int num_verteces)
@@ -10,14 +11,14 @@ graph *initiate_graph(int num_verteces)
 	
 	for (int i = 0; i < g->v_len; i++)
 	{
-		vertex *new_vertex = (vertex *)malloc(sizeof(vertex));
+		vertex *new_vertex = &g->vertices[i];
 		new_vertex->id = i + 1;
 		new_vertex->id_tree = 0;
 		new_vertex->color = 0;
 		new_vertex->neighbours = NULL;
 		new_vertex->n_len = 0;
-		
-		g->vertices[i] = *new_vertex;
+		new_vertex->bc_ids = (List *)malloc(sizeof(List));
+		initiate_list(new_vertex->bc_ids);
 	}
 	
 	g->l_len = 0;
@@ -38,14 +39,12 @@ void initiate_links(graph *g, int links[][2], int l_len)
 	int *count_links_per_node = (int *)calloc(g->v_len, sizeof(int));
 	for (i = 0; i < g->l_len; i++) 
 	{
-		link *new_link = (link *)malloc(sizeof(link));
+		link *new_link = &g->links[i];
 		new_link->id_vertex_1 = links[i][0];
 		new_link->id_vertex_2 = links[i][1];
 		new_link->is_edge = 0;
 		new_link->is_frond = 0;
 		new_link->color = 0;
-		
-		g->links[i] = *new_link;
 		
 		count_links_per_node[new_link->id_vertex_1 - 1]++;
 		count_links_per_node[new_link->id_vertex_2 - 1]++;
@@ -70,6 +69,7 @@ void initiate_links(graph *g, int links[][2], int l_len)
 }
 
 
+// Resets the color of each node
 void clear_colors(graph *g)
 {
 	if (g == NULL)
@@ -84,12 +84,14 @@ void clear_colors(graph *g)
 }
 
 
+// Extracts the neighbour of a node from its link
 int get_neighbour_id(link *l, int id)
 {
 	return l->id_vertex_1 == id ? l->id_vertex_2 : l->id_vertex_1;
 }
 
 
+// Colors a connected component
 void color_component(graph *g, int id, int color)
 {
 	vertex *v = &g->vertices[id];
@@ -105,6 +107,7 @@ void color_component(graph *g, int id, int color)
 }
 
 
+// Colors all the graph's nodes. Nodes of the same connected component have the same ID
 int color_graph(graph* g)
 {
 	if (g == NULL || g->vertices == NULL)
@@ -146,6 +149,9 @@ void print_graph(graph *g)
 		{
 			printf("%d  ", get_neighbour_id(v->neighbours[j], i + 1));
 		}
+		
+		printf("\nBiconnected Components IDs:");
+		print_list(v->bc_ids);
 		
 		printf("\n\n");
 	}
@@ -190,36 +196,53 @@ void free_graph(graph *g)
 }
 
 
+/* 
+ * Builds a tree graph inside the original graph to calculate biconnected components.
+ * Identifies edges and fronds between graph's links.
+*/
 void build_tree_graph(graph *g, int node_id)
 {
 	vertex *v = &g->vertices[node_id - 1];
 	
+	// If the node has already been visited, skip it
 	if (v != NULL && !v->color)
 	{
+		// Set the node as visited
 		v->color = 1;
 		
+		// Initiate the id_tree of the node, this will be helpful going forward
 		g->progress++;
 		v->id_tree = g->progress;
 		
+		// Go though all the node's neighbours
 		for (int i = 0; i < v->n_len; i++)
 		{
 			link *l = v->neighbours[i];
+			
+			// Link already visited? Then skip it
 			if (!l->is_edge && !l->is_frond)
 			{
 				int neighbour_id = get_neighbour_id(l, node_id);
+				
+				// Has the neighbour been already visited?
 				if (!g->vertices[neighbour_id - 1].color)
 				{
+					// If not, the link is an edge. 
+					// The current node will be the neighbour's parent in the tree graph
 					l->is_edge = 1;
+					// Go forward
 					build_tree_graph(g, neighbour_id);
 				}
 				else
 				{
+					// Neighbour has already been visited, the the link that connects them its a frond
 					l->is_frond = 1;
 				}
 			}
 		}
 		
 	}
+	return;
 }
 
 
@@ -247,6 +270,40 @@ int *get_root_nodes_index(graph *g, int num_components)
 }
 
 
+// Colors all the edges of the same connected component
+void color_edges(graph *g, int cut_vertex_id, int node_id, int c)
+{
+	vertex *v = &g->vertices[node_id - 1];
+	
+	if (v->color == c + 1)
+	{
+		return;
+	}
+	
+	v->color = c + 1;
+	add_tail(v->bc_ids, g->progress);
+	
+	int neighbour_id;
+	link *l;
+	for (int i = 0; i < v->n_len; i++)
+	{
+		l = v->neighbours[i];
+		neighbour_id = get_neighbour_id(l, v->id);
+		
+		if (!l->color)
+		{
+			l->color = c;
+			
+			// Don't call this function on the cut-vertex
+			if (neighbour_id != cut_vertex_id)
+			{
+				color_edges(g, cut_vertex_id, neighbour_id, c);
+			}
+		}
+	}
+}
+
+// Finds all the biconnected components inside a connected component
 int find_biconnected_components(graph *g, int node_id)
 {
 	vertex *v = &g->vertices[node_id - 1];
@@ -255,43 +312,59 @@ int find_biconnected_components(graph *g, int node_id)
 	{
 		v->color = 1;
 		
+		// A single node is a biconnected component it-self
 		if (!v->n_len)
 		{
+			add_tail(v->bc_ids, g->progress);
 			g->progress++;
 			return 0;
 		}
 		
+		// This variable will store the lowpoint of each neighbour
+		int neighbour_lowpoint = v->id_tree;
+		// This variable will store the lowpoint to pass to the node's parent
+		int node_lowpoint = v->id_tree;
 		
-		int min_id_neighbours = 10000;
-		int min_id_parents = 10000;
+		link *l;
+		vertex *neighbour;
 		for (int i = 0; i < v->n_len; i++)
 		{
-			link *l = v->neighbours[i];
-			vertex *neighbour = &g->vertices[get_neighbour_id(l, node_id) - 1];
+			l = v->neighbours[i];
+			neighbour = &g->vertices[get_neighbour_id(l, node_id) - 1];
 			
+			// If the link is an edge, find its lowpoint
 			if (l->is_edge) 
 			{
-				min_id_neighbours = find_biconnected_components(g, neighbour->id);
-				
-				if (min_id_neighbours != 0)
+				neighbour_lowpoint = find_biconnected_components(g, neighbour->id);
+				// If the neighbour_lowpoint is 0, that means that the neighbour was already visited.
+				// No further action required
+				if (neighbour_lowpoint != 0)
 				{
-					l->color = g->progress;
-					
-					// Biconnected component found
-					if (min_id_neighbours >= v->id_tree)
+					// If the neighbour lowpoint is lower that the node's id_tree, then you found a biconnected component
+					// This means that this node is a cut-vertex
+					if (neighbour_lowpoint >= v->id_tree)
 					{
+						// Add the new biconnected component ID to the node's bc_ids
+						add_tail(v->bc_ids, g->progress);
+						
+						l->color = g->progress;
+						// Color all the biconnected component edges from the neighbour
+						color_edges(g, v->id, neighbour->id, l->color);
+						// Update the ID
 						g->progress++;
 					}
+					// If no new component has been found, update the node's lowpoint if required
 					else
 					{
-						min_id_parents = min_id_parents > min_id_neighbours ? min_id_neighbours : min_id_parents;
+						node_lowpoint = node_lowpoint > neighbour_lowpoint ? neighbour_lowpoint : node_lowpoint;
 					}
 				}
 			}
+			// If the node it's a frond, update the lowpoint if required.
+			// This action can be performed just from a son of the current node
 			else if (l->is_frond && v->id_tree > neighbour->id_tree)
 			{
-				min_id_parents = min_id_parents > neighbour->id_tree ? neighbour->id_tree : min_id_parents;
-				l->color = g->progress;
+				node_lowpoint = node_lowpoint > neighbour->id_tree ? neighbour->id_tree : node_lowpoint;
 			}
 			else
 			{
@@ -299,199 +372,41 @@ int find_biconnected_components(graph *g, int node_id)
 			}
 		}
 		
-		return min_id_parents;
+		return node_lowpoint;
 	}
-	
 	return 0;
 }
 
 
+// Calculates all the biconnected components of a graph
 int calculate_biconnected_components(graph *g)
 {
 	clear_colors(g);
 	int num_components = color_graph(g);
 	int *root_nodes = get_root_nodes_index(g, num_components);
-	clear_colors(g);
 	
+	clear_colors(g);
 	int num_bc = 0;
+	int i;
 	if (root_nodes != NULL)
 	{
-		for (int i = 0; i < num_components; i++)
+		for (i = 0; i < num_components; i++)
 		{
 			build_tree_graph(g, root_nodes[i]);
 		}
 		
 		clear_colors(g);
-		
 		g->progress = 1;
-		for (int i = 0; i < num_components; i++)
+		for (i = 0; i < num_components; i++)
 		{
 			find_biconnected_components(g, root_nodes[i]);
 		}
 		num_bc = g->progress - 1;
 		
-		free(root_nodes);
 		clear_colors(g);
+		
+		free(root_nodes);
 	}
 	
 	return num_bc;
 }
-
-
-/* 
- * Old logic 
- * Used for testing
-
-typedef struct array {
-	int *values;
-	int len;
-} array;
-
-array *initialize_array(int id)
-{
-	array *a = (array *)malloc(sizeof(array));
-	a->len = 1;
-	a->values = (int *)malloc(sizeof(int));
-	a->values[0] = id;
-	
-	return a;
-}
-
-
-void free_array(array *a)
-{
-	if (a != NULL)
-	{
-		if(a->values != NULL)
-		{
-			free(a->values);
-		}
-		
-		free(a);
-	}
-	
-	return;
-}
-  
-
-array *merge_ordered_arrays(array *a1, array *a2)
-{
-	array *merged = (array *)malloc(sizeof(array));
-	merged->len = a1->len + a2->len;
-	merged->values = (int *)malloc(sizeof(int) * merged->len);
-	
-	int i = 0, j = 0, k = 0;
-	// Merge the two sorted arrays
-	while (i < a1->len && j < a2->len) 
-		{
-		if (a1->values[i] < a2->values[j]) 
-		{
-			merged->values[k++] = a1->values[i++];
-		} 
-		else if (a1->values[i] > a2->values[j]) 
-		{
-			merged->values[k++] = a2->values[j++];
-		}
-		else {
-			
-			merged->values[k++] = a1->values[i++];
-			j++;
-		}
-	}
-	
-	while (i < a1->len) {
-		merged->values[k++] = a1->values[i++];
-	}
-
-	while (j < a2->len) {
-		merged->values[k++] = a2->values[j++];
-	}
-	
-	merged->values = (int *)realloc(merged->values, sizeof(int) * k);
-	merged->len = k;
-	
-	return merged;
-}
-
-array *find_biconnected_components(graph *g, int node_id, int *id_corresponcence)
-{
-	vertex *v = &g->vertices[node_id - 1];
-	
-	if (v != NULL && !v->color)
-	{
-		v->color = 1;
-		
-		if (!v->n_len)
-		{
-			printf("%d\n\n", v->id);
-		}
-		
-		array *v_temp;
-		array *v_temp_2;
-		array *v_id = initialize_array(v->id_tree);
-		array *v_id_for_neighbours = initialize_array(v->id_tree);
-		
-		array *v_id_neighbour;
-		for (int i = 0; i < v->n_len; i++)
-		{
-			link *l = v->neighbours[i];
-			int neighbour_id = get_neighbour_id(l, node_id);
-			vertex *neighbour = &g->vertices[neighbour_id - 1];
-			
-			if (l->is_edge) 
-			{
-				v_id_neighbour = find_biconnected_components(g, neighbour_id, id_corresponcence);
-				
-				if (v_id_neighbour != NULL)
-				{
-					l->color = g->progress;
-					
-					// Biconnected component found
-					if (v_id_neighbour->values[0] >= v->id_tree)
-					{
-						array *merged = merge_ordered_arrays(v_id, v_id_neighbour);
-						
-						for (int j = 0; j < merged->len; j++)
-						{
-							printf("%d ", id_corresponcence[merged->values[j] - 1]);
-							
-						}
-						printf("\n\n");
-						
-						g->progress++;
-						free_array(merged);
-					}
-					else
-					{
-						v_temp = v_id_for_neighbours;
-						v_id_for_neighbours = merge_ordered_arrays(v_id_for_neighbours, v_id_neighbour);
-						
-						free_array(v_temp);
-					}
-					
-					free_array(v_id_neighbour);
-				}
-			}
-			else if (l->is_frond && v->id_tree > neighbour->id_tree)
-			{
-				v_temp = initialize_array(neighbour->id_tree);
-				v_temp_2 = v_id_for_neighbours;
-				v_id_for_neighbours = merge_ordered_arrays(v_id_for_neighbours, v_temp);
-				
-				l->color = g->progress;
-				
-				free_array(v_temp);
-				free_array(v_temp_2);
-			}
-			else
-			{
-				continue;
-			}
-		}
-		
-		return v_id_for_neighbours;
-	}
-	
-	return NULL;
-}
-*/
