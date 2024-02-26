@@ -1,53 +1,82 @@
-#include "list.h"
+
 
 #ifndef GRAPH_H
 #define GRAPH_H
 
+
 typedef struct graph_struct graph;
 typedef struct vertex_struct vertex;
-typedef struct link_struct link;
+typedef struct edge_struct edge;
+typedef struct neighbour_struct neighbour;
 
 
-typedef struct graph_struct
+typedef struct node
 {
-	int v_len;
-	int l_len;
-	vertex *vertices;
-	link *links;
-	int progress;
-};
+	int item;
+	neighbour *first_neighbour_bc;
+	struct node *next;
+} Node;
 
+
+typedef struct
+{
+	Node *head;
+	Node *tail;
+	int size;
+} List;
+
+
+void initiate_list(List*);
+void initiate_array_list(List**,int);
+void add(List*,int);
+void free_list(List*);
+void print_list(List*);
+
+
+typedef struct neighbour_struct
+{
+    int id;
+	int edge_id;
+    struct neighbour_struct *next;
+} neighbour;
 
 typedef struct vertex_struct
 {
-	int id;
+    int id;
+	int degree;
+    neighbour *first_neighbour;
 	int id_tree;
 	int color;
-	int n_len;
-	link **neighbours;
-	List* bc_ids;
-};
+	List *bc_ids;
+} vertex;
 
-
-typedef struct link_struct
+typedef struct edge_struct
 {
-	int id_vertex_1;
-	int id_vertex_2;
+    int coreness;
+    vertex *a;
+    vertex *b;
 	int is_edge;
 	int is_frond;
 	int color;
-};
+} edge;
+
+typedef struct graph_struct
+{
+    int num_edges;
+    int num_vertices;
+    int len_v;
+    int len_e;
+    edge *edges;
+    vertex *vertices;
+	int progress;
+	int iterations;
+} graph;
 
 
-graph *initiate_graph();
-void initiate_links(graph*, int[][2], int);
-
-int color_graph(graph*);
-void clear_colors(graph*);
-
-int calculate_biconnected_components(graph*);
-
-void print_graph(graph*);
+graph *set_input(char*,int,int);
 void free_graph(graph*);
+void clear_colors(graph*);
+int color_graph(graph*);
+void print_graph(graph*);
 
 #endif
