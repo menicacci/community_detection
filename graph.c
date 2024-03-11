@@ -46,7 +46,7 @@ void print_list(List *lp)
 {
 	Node *node;
 	
-	if(lp->head == NULL)
+	if(lp == NULL || lp->head == NULL)
 	{
 		printf("\nEmpty List");
 		return;
@@ -54,7 +54,7 @@ void print_list(List *lp)
 	
 	node = lp->head;
 	
-	printf("BC IDs:\n"); 
+	printf("\nBC IDs:\n"); 
 	neighbour *n;
 	while(node != NULL)
 	{
@@ -189,6 +189,7 @@ graph *set_input(char *input_path, int max_num_nodes, int max_num_edges)
 			}
 		}
 		
+		
 		fclose(file);
 		new_graph->num_edges = len_list_edges;
 		new_graph->num_vertices = len_list_vertex;
@@ -236,67 +237,14 @@ void free_graph(graph *g)
 	free(g);
 }
 
-
-void clear_colors(graph *g)
-{
-	if (g == NULL)
-	{
-		return;
-	}
-	
-	for (int i = 1; i <= g->num_vertices; i++)
-	{
-		g->vertices[i].color = 0;
-	}
-}
-
-
-void color_component(graph *g, int id, int color)
-{
-	vertex *v = &g->vertices[id];
-	
-	if (!v->color)
-	{
-		v->color = color;
-		neighbour *neighbour = v->first_neighbour;
-		
-		while (neighbour != NULL)
-		{
-			color_component(g, neighbour->id, color);
-			neighbour = neighbour->next;
-		}
-	}
-}
-
-
-int color_graph(graph* g)
-{
-	if (g == NULL || g->vertices == NULL)
-	{
-		return 0;
-	}
-	
-	clear_colors(g);
-	int i, color = 0;
-	for (i = 1; i <= g->num_vertices; i++)
-	{
-		if (!g->vertices[i].color)
-		{
-			color++;
-			color_component(g, i, color);
-		}
-	}
-	
-	return color;
-}
-
-void print_graph(graph *g)
+void print_graph(graph *g, int show_bc)
 {
 	if (g == NULL || g->vertices == NULL || g->num_vertices == 0)
 	{
 		printf("Empty graph\n");
 	}
 	
+	printf("\n");
 	neighbour *n;
 	edge *e;
 	vertex *v;
@@ -304,16 +252,29 @@ void print_graph(graph *g)
 	{
 		v = &g->vertices[i];
 		
-		printf("Node [%d]\t Degree: %d\nNeighbours:\n", v->id, v->degree);
+		char c = show_bc ? '\n' : '\t';
+		printf("Node: [%d]\tColor: [%d]\tID Tree: [%d]%cNeighbours:%c", v->id, v->color, v->id_tree, c, c);
 		n = v->first_neighbour;
 		while (n != NULL)
 		{
 			e = &g->edges[n->edge_id];
 			
-			printf("%d\t BC ID: [%d]\n", n->id, e->color);
+			printf("%d [E: %d, F: %d]\t", n->id, e->is_edge, e->is_frond);
+			if (show_bc)
+			{
+				printf("BC ID: [%d]\n",  e->color);
+			}
+			
 			n = n->next;
 		}
-		printf("\n");
-		print_list(v->bc_ids);
+		
+		if (show_bc)
+		{
+			print_list(v->bc_ids);
+		}
+		else
+		{
+			printf("\n\n");
+		}
 	}
 }

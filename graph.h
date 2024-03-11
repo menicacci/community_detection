@@ -1,8 +1,8 @@
-
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifndef GRAPH_H
 #define GRAPH_H
-
 
 typedef struct graph_struct graph;
 typedef struct vertex_struct vertex;
@@ -25,14 +25,6 @@ typedef struct
 	int size;
 } List;
 
-
-void initiate_list(List*);
-void initiate_array_list(List**,int);
-void add(List*,int);
-void free_list(List*);
-void print_list(List*);
-
-
 typedef struct neighbour_struct
 {
     int id;
@@ -47,6 +39,7 @@ typedef struct vertex_struct
     neighbour *first_neighbour;
 	int id_tree;
 	int color;
+	short queued;
 	List *bc_ids;
 } vertex;
 
@@ -55,8 +48,8 @@ typedef struct edge_struct
     int coreness;
     vertex *a;
     vertex *b;
-	int is_edge;
-	int is_frond;
+	short is_edge;
+	short is_frond;
 	int color;
 } edge;
 
@@ -73,10 +66,14 @@ typedef struct graph_struct
 } graph;
 
 
+void initiate_list(List*);
+void initiate_array_list(List**,int);
+void add(List*,int);
+void free_list(List*);
+void print_list(List*);
+
 graph *set_input(char*,int,int);
 void free_graph(graph*);
-void clear_colors(graph*);
-int color_graph(graph*);
-void print_graph(graph*);
+void print_graph(graph*,int);
 
 #endif
