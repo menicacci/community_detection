@@ -6,13 +6,13 @@ This repository contains a C implementation of Tarjan's Algorithm for finding bi
 
 - `graph.c` and `graph.h`: Graph data structure implementation.
 - `main.c`: Main file utilizing Tarjan's Algorithm.
-- `tarjan.c` and `tarjan.h`: Tarjan Algorithm implementation.
+- `utils.c` and `utils.h`: Tarjan Algorithm implementation.
 - `example.txt`: Example graph input file.
 
 **Compilation:**
 
 ```bash
-gcc -o <executable_name> main.c graph.c tarjan.c
+gcc -o <executable_name> main.c graph.c utils.c
 ```
 
 **Usage:**

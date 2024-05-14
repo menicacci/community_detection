@@ -15,4 +15,6 @@ void build_tree_graph_rec(graph*,int);
 int color_graph_it(graph*);
 void build_tree_graph_it(graph*,int);
 
+int calculate_biconnected_components(graph*);
+
 #endif
