@@ -67,6 +67,10 @@ void print_list(List *lp)
 
 
 void free_list(List *list) {
+	if (list == NULL) {
+		return;
+	}
+
 	Node *current = list->head;
 	Node *next;
 	
