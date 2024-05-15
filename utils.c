@@ -474,3 +474,98 @@ void build_tree_graph_it(graph *g, int node_id)
 		}
 	}
 }
+
+
+int find_max_int(int* array, int size) {
+	if (array == NULL || size <= 0) {
+		return -1;
+	}
+
+	int max = array[0];
+	for (int i = 1; i < size; i++) {
+		if (array[i] > max) {
+			max = array[i];
+		}
+	}
+
+	return max;
+}
+
+
+int *find_node_coreness(graph* g) {
+	if (g == NULL) {
+		return NULL;
+	}
+
+	int i, max_degree, start, num;
+	int* coreness = (int *)malloc(sizeof(int) * g->num_vertices);
+	int* bin = (int *)calloc(max_degree + 1, sizeof(int));
+	int* sort = (int *)malloc(sizeof(int) * g->num_vertices);
+	int* pos = (int *)malloc(sizeof(int) * g->num_vertices);
+
+	for (i = 0; i < g->num_vertices; i++) {
+		coreness[i] = g->vertices[i + 1].degree;
+	}
+
+	max_degree = find_max_int(coreness, g->num_vertices);
+	for (i = 0; i < g->num_vertices; i++) {
+		bin[coreness[i]]++;
+	}
+
+	start = 0;
+	for (i = 0; i < max_degree + 1; i++) {
+		num = bin[i];
+		bin[i] = start;
+		start += num;
+	}
+	
+	for (i = 0; i < g->num_vertices; i++) {
+		sort[bin[coreness[i]]++] = i;
+	}
+
+	for (i = max_degree; i > 0; i--) {
+		bin[i] = bin[i - 1];
+	}
+	bin[i] = 0;
+
+	for (i = 0; i < g->num_vertices; i++) {
+		pos[sort[i]] = i;
+	}
+
+	int node_id, node_degree, neighbour_id, neighbour_degree;
+	int f_sort, f_pos, s_pos, pos_from, pos_to;
+	neighbour* neighbour;
+	for (i = 0; i < g->num_vertices; i++) {
+		node_id = sort[i];
+		node_degree = coreness[node_id];
+
+		neighbour = g->vertices[node_id + 1].first_neighbour;
+		while (neighbour != NULL) {
+			neighbour_id = neighbour->id - 1;
+			neighbour_degree = coreness[neighbour_id];
+
+			if (neighbour_degree > node_degree) {
+				coreness[neighbour_id]--;
+
+				pos_from = bin[neighbour_degree];
+				pos_to = neighbour_id;
+
+				f_sort = sort[pos_from];
+				f_pos = pos[sort[pos_from]];
+				s_pos = pos[pos_to];
+
+        		sort[pos_from] = pos_to;
+        		sort[pos[pos_to]] = f_sort;
+
+        		pos[f_sort] = s_pos;
+        		pos[pos_to] = f_pos;
+
+				bin[neighbour_degree]++;
+			}
+
+			neighbour = neighbour->next;
+		}
+	}
+
+	return coreness;	
+}

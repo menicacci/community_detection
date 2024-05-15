@@ -6,10 +6,10 @@
 #define V 1000000
 #define E 10000000
 
+
 int main(int argc, char **argv)
 {
-	if (argc < 2)
-    {
+	if (argc < 2) {
         printf("Please provide a string as a command-line argument.\n");
         return 1; // Exit the program with an error code
     }
@@ -19,10 +19,18 @@ int main(int argc, char **argv)
 	
 	printf("Graph loaded\n");
 
-	int num_bc = calculate_biconnected_components(graph_input);
-	printf("Nodes: [%d]\tLinks: [%d]\tIterations: [%d]\tBiconnected Components: [%d]\n", graph_input->num_vertices, graph_input->num_edges, graph_input->iterations, num_bc);
+	// int num_bc = calculate_biconnected_components(graph_input);
+	// printf("Nodes: [%d]\tLinks: [%d]\tIterations: [%d]\tBiconnected Components: [%d]\n", graph_input->num_vertices, graph_input->num_edges, graph_input->iterations, num_bc);
 	
-	print_graph(graph_input, 1);
+	print_graph(graph_input, 0);
+
+	int* node_coreness = find_node_coreness(graph_input);
+
+	printf("\nCoreness: ");
+	for (int i = 0; i < graph_input->num_vertices; i++) {
+		printf("%d ", node_coreness[i]);
+	}
+	printf("\n");
 
 	free_graph(graph_input);
 	

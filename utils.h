@@ -17,4 +17,6 @@ void build_tree_graph_it(graph*,int);
 
 int calculate_biconnected_components(graph*);
 
+int *find_node_coreness(graph* g);
+
 #endif
