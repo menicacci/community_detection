@@ -112,7 +112,7 @@ int *get_root_nodes_index(graph *g, int num_components)
 	{
 		if (c == g->vertices[i].color)
 		{
-			root_nodes[c - 1] = i + 1;
+			root_nodes[c - 1] = i;
 			c++;
 		}
 	}
@@ -139,14 +139,17 @@ void color_component_rec(graph *g, int id, int color)
 }
 
 
-int color_graph_rec(graph* g)
+int color_graph_rec(graph* g, int clear)
 {
 	if (g == NULL || g->vertices == NULL)
 	{
 		return 0;
 	}
 	
-	clear_colors(g);
+	if (clear) {
+		clear_colors(g);
+	}
+	
 	int i, color = 0;
 	for (i = 1; i <= g->num_vertices; i++)
 	{
@@ -158,6 +161,27 @@ int color_graph_rec(graph* g)
 	}
 	
 	return color;
+}
+
+
+void exclude_edges(graph* g) {
+	vertex *v;
+	neighbour *neighbour;
+	for (int i = 1; i <= g->num_vertices; i++) {
+		v = &g->vertices[i];
+
+		if (!v->color) {
+			neighbour = v->first_neighbour;
+
+			while (neighbour != NULL) {
+				if (g->vertices[neighbour->id].color) {
+					g->edges[neighbour->edge_id].color = 1;
+				}
+				
+				neighbour = neighbour->next;
+			}
+		}
+	}
 }
 
 
@@ -181,7 +205,7 @@ void build_tree_graph_rec(graph *g, int node_id)
 			link = &g->edges[neighbour->edge_id];
 			
 			// Check if the edge has already been marked
-			if (!link->is_edge && !link->is_frond)
+			if (!link->is_edge && !link->is_frond && !link->color)
 			{
 				// If the neighbour has not already been visited, then the link is an edge
 				if (!g->vertices[neighbour->id].color)
@@ -281,7 +305,6 @@ int find_biconnected_components_rec(graph *g, int node_id)
 				if (neighbour_lowpoint >= v->id_tree)
 				{
 					add(v->bc_ids, g->progress);
-					
 					/* 
 					 * Color th edges of the biconnected component, here we are iterating from the neighbour ID, not from the node itself.
 					 * So the cost will be in the order of the bc component's links.
@@ -310,10 +333,14 @@ int find_biconnected_components_rec(graph *g, int node_id)
 }
 
 
-int calculate_biconnected_components(graph *g)
+int calculate_biconnected_components(graph *g, int k_core)
 {
 	clear_colors(g);
 	
+	if (k_core) {
+		detect_k_cores(g, k_core);
+	}
+
 	int i;
 	vertex *v;
 	for (i = 1; i <= g->num_vertices; i++)
@@ -325,10 +352,15 @@ int calculate_biconnected_components(graph *g)
 	}
 	
 	// You need to count the number of connected components and store a node ID for each of them
-	int num_components = color_graph_rec(g);
+	int num_components = color_graph_rec(g, !k_core);
 	int *root_nodes = get_root_nodes_index(g, num_components);
 	
 	clear_colors(g);
+	if (k_core) {
+		detect_k_cores(g, k_core);
+		exclude_edges(g);
+	}
+
 	int num_bc = 0;
 	if (root_nodes != NULL)
 	{
@@ -339,6 +371,9 @@ int calculate_biconnected_components(graph *g)
 		}
 		
 		clear_colors(g);
+		if (k_core) {
+			detect_k_cores(g, k_core);
+		}
 		g->progress = 1;
 		
 		// For each connected component, find all the biconnected components
@@ -348,29 +383,29 @@ int calculate_biconnected_components(graph *g)
 		}
 		num_bc = g->progress - 1;
 		
-		
-		// Order node's edges based on biconnected component
-		int *bc_ind = (int *)calloc(num_bc, sizeof(int));
-		List *l;
-		for (i = 1; i <= g->num_vertices; i++)
-		{
-			v = &g->vertices[i];
-			l = v->bc_ids;
-			
-			// If a node has only one biconnected component, there's no need to sort the edges
-			if (l->size <= 1)
+		if (!k_core) {
+			// Order node's edges based on biconnected component
+			int *bc_ind = (int *)calloc(num_bc, sizeof(int));
+			List *l;
+			for (i = 1; i <= g->num_vertices; i++)
 			{
-				l->head->first_neighbour_bc = v->first_neighbour;
-			}
-			else
-			{
-				order_node_edges_by_bc(g, v, bc_ind);
-			}
+				v = &g->vertices[i];
+				l = v->bc_ids;
+
+				// If a node has only one biconnected component, there's no need to sort the edges
+				if (l->size <= 1)
+				{
+					l->head->first_neighbour_bc = v->first_neighbour;
+				}
+				else
+				{
+					order_node_edges_by_bc(g, v, bc_ind);
+				}
+			}	
+			free(bc_ind);
 		}
 		
 		clear_colors(g);
-		
-		free(bc_ind);
 		free(root_nodes);
 	}
 	
@@ -567,5 +602,27 @@ int *find_node_coreness(graph* g) {
 		}
 	}
 
+	for (i = 0; i < g->num_vertices; i++) {
+		g->vertices[i + 1].k_core = coreness[i];
+	}
+
+	free(bin);
+	free(sort);
+	free(pos);
+
 	return coreness;	
+}
+
+int detect_k_cores(graph* g, int k) {
+	clear_colors(g);
+
+	int nodes_found = g->num_vertices;
+	for (int i = 1; i <= g->num_vertices; i++) {
+		if (g->vertices[i].k_core < k) {
+			g->vertices[i].color = 100000;
+			nodes_found--;
+		}
+	}
+
+	return nodes_found;
 }

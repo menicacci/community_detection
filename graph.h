@@ -39,6 +39,7 @@ typedef struct vertex_struct
     neighbour *first_neighbour;
 	int id_tree;
 	int color;
+	short k_core;
 	short queued;
 	List *bc_ids;
 } vertex;
@@ -74,6 +75,10 @@ void print_list(List*);
 
 graph *set_input(char*,int,int);
 void free_graph(graph*);
-void print_graph(graph*,int);
+void print_graph(graph*,int,int,int);
+void print_node(graph*,int,int,int);
+
+float get_graph_density(graph*);
+void write_graph(graph*,char*);
 
 #endif

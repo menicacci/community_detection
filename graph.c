@@ -241,7 +241,46 @@ void free_graph(graph *g)
 	free(g);
 }
 
-void print_graph(graph *g, int show_bc)
+
+void print_node(graph* g, int node_id, int show_neighbours, int show_bc) {
+	vertex *v;	
+	neighbour *n;
+	edge *e;
+
+	v = &g->vertices[node_id];
+	printf("Node: [%d]\tColor: [%d]\tID Tree: [%d]\tDegree: [%d]\t", v->id, v->color, v->id_tree, v->degree);
+	if (show_neighbours) {
+		char c = show_bc ? '\n' : '\t';
+		printf("%cNeighbours:%c", c, c);
+
+		n = v->first_neighbour;
+		while (n != NULL)
+		{
+			e = &g->edges[n->edge_id];
+
+			printf("%d [E: %d, F: %d]\t", n->id, e->is_edge, e->is_frond);
+			if (show_bc)
+			{
+				printf("BC ID: [%d]\n",  e->color);
+			}
+
+			n = n->next;
+		}
+
+		if (show_bc)
+		{
+			print_list(v->bc_ids);
+		}
+		else
+		{
+			printf("\n");
+		}
+	}
+	printf("\n");
+}
+
+
+void print_graph(graph *g, int show_not_colored, int show_neighbours, int show_bc)
 {
 	if (g == NULL || g->vertices == NULL || g->num_vertices == 0)
 	{
@@ -249,36 +288,63 @@ void print_graph(graph *g, int show_bc)
 	}
 	
 	printf("\n");
-	neighbour *n;
-	edge *e;
-	vertex *v;
 	for (int i = 1; i <= g->num_vertices; i++)
 	{
-		v = &g->vertices[i];
-		
-		char c = show_bc ? '\n' : '\t';
-		printf("Node: [%d]\tColor: [%d]\tID Tree: [%d]%cNeighbours:%c", v->id, v->color, v->id_tree, c, c);
-		n = v->first_neighbour;
-		while (n != NULL)
-		{
-			e = &g->edges[n->edge_id];
-			
-			printf("%d [E: %d, F: %d]\t", n->id, e->is_edge, e->is_frond);
-			if (show_bc)
-			{
-				printf("BC ID: [%d]\n",  e->color);
-			}
-			
-			n = n->next;
-		}
-		
-		if (show_bc)
-		{
-			print_list(v->bc_ids);
-		}
-		else
-		{
-			printf("\n\n");
+		if (!show_not_colored || !g->vertices[i].color) {
+			print_node(g, i, show_neighbours, show_bc);
 		}
 	}
+}
+
+
+float get_graph_density(graph* g) {
+	int num_v = 0;
+	int num_e = 0;
+	vertex *v;
+	neighbour* n;
+
+	for(int i = 1; i <= g->num_vertices; i++) {
+		v = &g->vertices[i];
+		if (!v->color) {
+			num_v++;
+			n = v->first_neighbour;
+
+			while (n != NULL) {
+				if (!g->vertices[n->id].color && i < n->id) {
+					num_e++;
+				}
+
+				n = n->next;
+			}
+		}
+	}
+	return num_e/num_v;
+}
+
+
+void write_graph(graph* g, char* filename) {
+	FILE *file = fopen(filename, "w"); // Open file for writing
+    if (file == NULL) {
+        perror("Error opening file");
+        return;
+    }
+
+	vertex *v;
+	neighbour* n;
+
+	for(int i = 1; i <= g->num_vertices; i++) {
+		v = &g->vertices[i];
+		if (!v->color) {
+			n = v->first_neighbour;
+
+			while (n != NULL) {
+				if (!g->vertices[n->id].color && i < n->id) {
+					fprintf(file, "%d\t%d\t%d\n", i, n->id, g->edges[n->edge_id].color);
+				}
+
+				n = n->next;
+			}
+		}
+	}
+	fclose(file);
 }
