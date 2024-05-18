@@ -75,10 +75,8 @@ void print_list(List*);
 
 graph *set_input(char*,int,int);
 void free_graph(graph*);
-void print_graph(graph*,int,int,int);
-void print_node(graph*,int,int,int);
 
 float get_graph_density(graph*);
-void write_graph(graph*,char*);
+int *get_degrees(graph*);
 
 #endif

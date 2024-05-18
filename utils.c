@@ -14,6 +14,7 @@ void clear_colors(graph *g)
 	}
 }
 
+
 /*
  * bc_ind works as a support structure to perform the bucket sort algorithm efficiently
  * 
@@ -263,6 +264,7 @@ void color_edges_rec(graph *g, int cut_vertex_id, int node_id)
 	}
 	
 }
+
 
 // Finds all the biconnected components inside a connected component
 int find_biconnected_components_rec(graph *g, int node_id)
@@ -527,22 +529,20 @@ int find_max_int(int* array, int size) {
 }
 
 
-int *find_node_coreness(graph* g) {
+int* find_node_coreness(graph* g) {
 	if (g == NULL) {
 		return NULL;
 	}
 
 	int i, max_degree, start, num;
-	int* coreness = (int *)malloc(sizeof(int) * g->num_vertices);
+	int* coreness = get_degrees(g);
+	
+	max_degree = find_max_int(coreness, g->num_vertices);
+
 	int* bin = (int *)calloc(max_degree + 1, sizeof(int));
 	int* sort = (int *)malloc(sizeof(int) * g->num_vertices);
 	int* pos = (int *)malloc(sizeof(int) * g->num_vertices);
 
-	for (i = 0; i < g->num_vertices; i++) {
-		coreness[i] = g->vertices[i + 1].degree;
-	}
-
-	max_degree = find_max_int(coreness, g->num_vertices);
 	for (i = 0; i < g->num_vertices; i++) {
 		bin[coreness[i]]++;
 	}
@@ -608,21 +608,22 @@ int *find_node_coreness(graph* g) {
 
 	free(bin);
 	free(sort);
-	free(pos);
+	free(pos);	
 
-	return coreness;	
+	return coreness;
 }
+
 
 int detect_k_cores(graph* g, int k) {
 	clear_colors(g);
 
-	int nodes_found = g->num_vertices;
+	int num_k_nodes = g->num_vertices;
 	for (int i = 1; i <= g->num_vertices; i++) {
 		if (g->vertices[i].k_core < k) {
 			g->vertices[i].color = 100000;
-			nodes_found--;
+			num_k_nodes--;
 		}
 	}
 
-	return nodes_found;
+	return num_k_nodes;
 }

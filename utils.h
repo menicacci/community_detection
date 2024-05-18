@@ -16,8 +16,10 @@ void build_tree_graph_it(graph*,int);
 
 int calculate_biconnected_components(graph*, int);
 
-int *find_node_coreness(graph*);
+int* find_node_coreness(graph*);
 int find_max_int(int*,int);
 int detect_k_cores(graph*,int);
+
+int* find_densest_subgraph(graph*);
 
 #endif
