@@ -21,5 +21,5 @@ gcc -o tarjan.exe main.c graph.c utils.c graph_io.c
 Run the executable with a graph file:
 
 ```bash
-./<executable_name> example.txt
+./<executable_name> input_graph output_file k_core
 ```
